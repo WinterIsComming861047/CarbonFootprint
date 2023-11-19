@@ -1,0 +1,210 @@
+<html>
+
+<head>
+  <title>Place Autocomplete and Directions</title>
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=default"></script>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
+    integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+  <link rel="stylesheet" type="text/css" href="./style.css" />
+  <script type="module" src="./index.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
+</head>
+
+<body>
+  <div id="app" class="mycontainer">
+    <div class="row">
+      <div style="display: none">
+        <input id="origin-input" class="controls" type="text" placeholder="輸入出發點" />
+        <input id="destination-input" class="controls" type="text" placeholder="輸入目的地" />
+        <div id="mode-selector" class="controls">
+          <input type="radio" name="type" id="changemode-walking" checked="checked" />
+          <label for="changemode-walking">走路</label>
+
+          <input type="radio" name="type" id="changemode-transit" />
+          <label for="changemode-transit">大眾運輸</label>
+
+          <input type="radio" name="type" id="changemode-driving" />
+          <label for="changemode-driving">開車</label>
+        </div>
+      </div>
+
+      <!-- google map -->
+      <div class="col-md-8 google-map">
+        <div id="map" class="embed-responsive embed-responsive-16by9"></div>
+      </div>
+
+      <!-- 顯示距離列表 -->
+      <div class="col-md-4">
+        <div class="list-group">
+          <div class="list-group-item">
+            <div class="row">
+              <div class="col-sm">
+                <h5 class="mb-1" id="originName_header">起點</h5>
+              </div>
+              <div class="col-sm">
+                <h5 class="mb-1" id="destinationName_header">目的地</h5>
+              </div>
+              <div class="col-sm">
+                <small id="distance_header">距離</small>
+              </div>
+              <div class="col-sm">
+                <small id="transportation_header">交通方式</small>
+              </div>
+              <div class="col-sm">
+                <small id="duration_header">預計到達時間</small>
+              </div>
+              <div class="col-sm">
+                <small id="carbon_emission_header">預計碳排放</small>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-sm">
+                <small id="originName"></small>
+              </div>
+              <div class="col-sm">
+                <small id="destinationName"></small>
+              </div>
+              <div class="col-sm">
+                <small id="distance"></small>
+              </div>
+              <div class="col-sm">
+                <small id="transportation"></small>
+              </div>
+              <div class="col-sm">
+                <small id="duration"></small>
+              </div>
+              <div class="col-sm">
+                <small id="carbon_emission"></small>
+              </div>
+            </div>
+          </div>
+        </div>
+        <br>
+        <br>
+        <br>
+        <div class="row">
+          <div class="col-sm">
+            <h5 class="mb-1">總碳排放: {{ totalCarbonEmission }}</h5>
+          </div>
+          <button @click="addData" class="btn btn-primary">儲存資料↓</button>
+        </div>
+        <br>
+        <br>
+        <div class="list-group">
+          <div class="row" style="align-content: center;">
+            <div class="col-4">
+              <h5 class="mb-1">已儲存資料</h5>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-sm">
+              <h5 class="mb-1" id="originName_header">起點</h5>
+            </div>
+            <div class="col-sm">
+              <h5 class="mb-1" id="destinationName_header">目的地</h5>
+            </div>
+            <div class="col-sm">
+              <small id="distance_header">距離</small>
+            </div>
+            <div class="col-sm">
+              <small id="transportation_header">交通方式</small>
+            </div>
+            <div class="col-sm">
+              <small id="duration_header">預計到達時間</small>
+            </div>
+            <div class="col-sm">
+              <small id="carbon_emission_header">預計碳排放</small>
+            </div>
+          </div>
+          <div v-for="(f, index) in features" :key="index" class="list-group-item">
+            <div class="row">
+              <div class="col-sm">
+                <small>{{ f.originName }}</small>
+              </div>
+              <div class="col-sm">
+                <small>{{ f.destinationName }}</small>
+              </div>
+              <div class="col-sm">
+                <small>{{ f.distance }}</small>
+              </div>
+              <div class="col-sm">
+                <small>{{ f.transportation }}</small>
+              </div>
+              <div class="col-sm">
+                <small>{{ f.duration }}</small>
+              </div>
+              <div class="col-sm">
+                <small>{{ f.carbon_emission }}</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 
+      The `defer` attribute causes the callback to execute after the full HTML
+      document has been parsed. For non-blocking uses, avoiding race conditions,
+      and consistent behavior across browsers, consider loading using Promises.
+      See https://developers.google.com/maps/documentation/javascript/load-maps-js-api
+      for more information.
+      -->
+  <script>
+    var watchObject;
+    var watchObject_2;
+    var destinationName;
+  </script>
+  <script>
+    new Vue({
+      el: '#app',
+      data: {
+        features: []
+      },
+      computed: {
+        // 計算已儲存資料的總碳排放
+        totalCarbonEmission() {
+          return this.features.reduce((sum, feature) => {
+            return sum + parseFloat(feature.carbon_emission);
+          }, 0).toFixed(2); // 四捨五入到小數點後兩位
+        }
+      },
+      methods: {
+        addData() {
+          // 獲取來自特定HTML元素的值
+          const originNameValue = document.getElementById('originName').textContent;
+          const destinationNameValue = document.getElementById('destinationName').textContent;
+          const distanceValue = document.getElementById('distance').textContent;
+          const transportationValue = document.getElementById('transportation').textContent;
+          const durationValue = document.getElementById('duration').textContent;
+          const carbonEmissionValue = document.getElementById('carbon_emission').textContent;
+
+          // 在每次按下按鈕時，將新的數據插入到列表中
+          this.features.push({
+            originName: originNameValue,
+            destinationName: destinationNameValue,
+            distance: distanceValue,
+            transportation: transportationValue,
+            duration: durationValue,
+            carbon_emission: carbonEmissionValue
+          });
+          if (document.getElementById("destination-input").value !== "") {
+            document.getElementById("origin-input").value = document.getElementById("destination-input").value;
+            setTimeout(function () {
+              document.getElementById("destination-input").value = "";
+            }, 100);
+          }
+        }
+      }
+    });
+  </script>
+  <script
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD43acuAWKhupbRHOvnWAmJ2MKO35rXs2Y&callback=initMap&libraries=places&v=weekly"
+    defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
+    crossorigin="anonymous"></script>
+</body>
+
+</html>
